@@ -52,7 +52,7 @@
     </div>
     <!-- Adımlar -->
     <div class="row g-4 py-4">
-        <div class="col-md-3">
+        <div class="col-12 col-md-4 col-lg-3">
             <div class="card h-100 border-primary shadow-sm rounded">
                 <div class="card-body text-center">
                     <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4 steps">
@@ -64,31 +64,31 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-12 col-md-4 col-lg-3">
             <div class="card h-100 border-success shadow-sm rounded">
                 <div class="card-body text-center">
                     <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4 steps">
                         <i class="bi bi-cart-check bi-xl-size"></i>
                     </div>
                     <h3 class="card-title fw-bold text-success">2. Adım</h3>
-                    <p class="card-text">Yardım kolinize eklenen ürünlerinizi kontrol etmek için sağ üst köşedeki <strong class="text-success">"<i class="bi bi-cart3 cart-icon me-1"></i> İyilik Sepetim"</strong> butonuna tıklayınız.</p>
+                    <p class="card-text">Yardım kolinize eklenen ürünlerinizi kontrol etmek için sağ üst köşedeki <strong class="text-success">"<i class="bi bi-cart3 me-1"></i> İyilik Sepetim"</strong> butonuna tıklayınız.</p>
                     <p class="text-muted small fst-italic mt-2">* Yardım kolinizdeki ürünleri buradan kontrol ederek dilediğiniz gibi düzenleyebilirsiniz.</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-12 col-md-4 col-lg-3">
             <div class="card h-100 border-warning shadow-sm rounded">
                 <div class="card-body text-center">
                     <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4 steps">
                         <i class="bi bi-box-seam bi-xl-size"></i>
                     </div>
                     <h3 class="card-title fw-bold text-warning">3. Adım</h3>
-                    <p class="card-text">Yardım koliniz hazır olduğunda <strong class="text-warning">"<i class="bi bi-cart3 cart-icon me-1"></i> İyilik Sepetim"</strong> butonuna tıklayarak açılan pencereden <strong class="text-warning">"<i class="bi bi-bag-heart me-1"></i> İyiliği Ulaştır"</strong> butonuna basınız.
+                    <p class="card-text">Yardım koliniz hazır olduğunda <strong class="text-warning">"<i class="bi bi-cart3 me-1"></i> İyilik Sepetim"</strong> butonuna tıklayarak açılan pencereden <strong class="text-warning">"<i class="bi bi-bag-heart me-1"></i> İyiliği Ulaştır"</strong> butonuna basınız.
                     <p class="text-muted small fst-italic mt-2">* İyiliği ulaştır butonuna bastıktan sonra sepette .<span class="badge bg-warning">%15 indirim</span> uygulandığını görebilirsiniz. </p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-12 col-md-4 col-lg-3">
             <div class="card h-100 border-danger shadow-sm rounded">
                 <div class="card-body text-center">
                     <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4 steps">

@@ -371,3 +371,66 @@
         height: 32px;
     }
 }
+/* Ürün kartı fiyat stili */
+.price-tag {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 10px;
+    position: relative;
+}
+
+.original-price {
+    font-size: 0.9rem;
+    color: #6c757d;
+    text-decoration: line-through;
+    position: relative;
+}
+
+.original-price::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #dc3545;
+    opacity: 0.5;
+}
+
+.current-price {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #0d6efd;
+    margin-top: 2px;
+    background: -webkit-linear-gradient(45deg, #0d6efd, #0a58ca);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 1px 1px 2px rgba(13, 110, 253, 0.2);
+}
+
+/* İndirim etiketi (opsiyonel) */
+.price-tag.has-discount::before {
+    content: 'İndirim';
+    position: absolute;
+    top: -10px;
+    right: 0;
+    background-color: #dc3545;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transform: rotate(3deg);
+}
+
+/* Mobil görünüm için ayarlamalar */
+@media (max-width: 576px) {
+    .current-price {
+        font-size: 1.2rem;
+    }
+
+    .original-price {
+        font-size: 0.8rem;
+    }
+}

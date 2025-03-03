@@ -6,15 +6,150 @@ use Livewire\Component;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class Checkout extends Component
 {
-    // Form alanları - orders tablonuza uygun olarak güncellendi
-    public $buyer_name;
-    public $identification_no;
-    public $phone_no;
-    public $email_address;
-    public $city;
+    // Form alanları
+    public $buyer_name = '';
+    public $identification_no = '';
+    public $phone_no = '';
+    public $email_address = '';
+    public $city = '';
+
+    // Anlık doğrulama kuralları
+    protected $rules = [
+        'buyer_name' => 'required|string|max:255',
+        'identification_no' => 'required|digits:11',
+        'phone_no' => 'required|min:10',
+        'email_address' => 'required|email:rfc,dns',
+        'city' => 'required|string',
+    ];
+
+    // Özel hata mesajları
+    protected $messages = [
+        'buyer_name.required' => 'Ad Soyad alanı zorunludur.',
+        'buyer_name.max' => 'Ad Soyad en fazla 255 karakter olabilir.',
+        'identification_no.required' => 'TC Kimlik Numarası zorunludur.',
+        'identification_no.digits' => 'TC Kimlik Numarası 11 haneli olmalıdır.',
+        'phone_no.required' => 'Telefon numarası zorunludur.',
+        'phone_no.min' => 'Telefon numarası geçerli değil.',
+        'email_address.required' => 'E-posta adresi zorunludur.',
+        'email_address.email' => 'Geçerli bir e-posta adresi giriniz.',
+        'city.required' => 'Şehir seçimi zorunludur.',
+    ];
+
+    // Anlık (real-time) doğrulama
+    protected function getValidationAttributes()
+    {
+        return [
+            'buyer_name' => 'Ad Soyad',
+            'identification_no' => 'TC Kimlik No',
+            'phone_no' => 'Telefon',
+            'email_address' => 'E-posta',
+            'city' => 'Şehir',
+        ];
+    }
+
+    // TC Kimlik için anlık doğrulama ve maskeleme
+    public function updatedIdentificationNo()
+    {
+        // Sadece rakamları al
+        $digits = preg_replace('/\D/', '', $this->identification_no);
+
+        // 11 karakterle sınırla
+        $this->identification_no = substr($digits, 0, 11);
+
+        // Eğer 11 karakterden azsa, anlık hata göster
+        if (strlen($this->identification_no) < 11 && strlen($this->identification_no) > 0) {
+            $this->addError('identification_no', 'TC Kimlik Numarası 11 haneli olmalıdır. Şu an: ' . strlen($this->identification_no) . ' hane');
+        } else {
+            $this->resetValidation('identification_no');
+            $this->validateOnly('identification_no');
+        }
+    }
+
+    // Telefon numarası için anlık maskeleme
+    public function updatedPhoneNo()
+    {
+        // Sadece rakamları al
+        $digits = preg_replace('/\D/', '', $this->phone_no);
+
+        // Maksimum 10 haneye sınırla
+        $digits = substr($digits, 0, 10);
+
+        // Formatı uygula 5XX XXX XX XX
+        $formatted = '';
+
+        for ($i = 0; $i < strlen($digits); $i++) {
+            if ($i == 3 || $i == 6 || $i == 8) {
+                $formatted .= ' ';
+            }
+            $formatted .= $digits[$i];
+        }
+
+        $this->phone_no = $formatted;
+
+        // Eğer 10 haneden eksikse, anlık hata göster
+        if (strlen($digits) < 10 && strlen($digits) > 0) {
+            $this->addError('phone_no', 'Telefon numarası 10 haneli olmalıdır. Şu an: ' . strlen($digits) . ' hane');
+        } else {
+            $this->resetValidation('phone_no');
+            $this->validateOnly('phone_no');
+        }
+    }
+
+    // Ad Soyad için anlık doğrulama
+    public function updatedBuyerName()
+    {
+        $this->validateOnly('buyer_name');
+    }
+
+    // E-posta için anlık doğrulama
+    public function updatedEmailAddress()
+    {
+        $this->validateOnly('email_address');
+    }
+
+    // Şehir için anlık doğrulama
+    public function updatedCity()
+    {
+        $this->validateOnly('city');
+    }
+
+    // Sepet modalını açma metodu
+    public function openCartModal()
+    {
+        // Modal açma emrini JavaScript'e gönder
+        $this->dispatch('openCartModal');
+    }
+
+    // Sepeti düzenle butonuna basıldığında çalışır
+    public function refreshAndOpenModal()
+    {
+        // Sepeti güncelleyin
+        $this->refreshCart();
+
+        // Modal açma emrini JavaScript'e gönder
+        $this->dispatch('openCartModal');
+
+        // Sayfayı yenileyin (JavaScript ile)
+        $this->dispatch('refreshPage');
+    }
+
+    // Şehir listesi
+    public $cities = [
+        'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
+        'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale',
+        'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
+        'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Isparta', 'Mersin',
+        'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli',
+        'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş', 'Nevşehir',
+        'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas', 'Tekirdağ', 'Tokat',
+        'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray', 'Bayburt',
+        'Karaman', 'Kırıkkale', 'Batman', 'Şırnak', 'Bartın', 'Ardahan', 'Iğdır', 'Yalova', 'Karabük',
+        'Kilis', 'Osmaniye', 'Düzce'
+    ];
 
     // Sepet özeti
     public $cartItems = [];
@@ -46,44 +181,23 @@ class Checkout extends Component
     // Form gönderildiğinde çalışacak metod
     public function placeOrder()
     {
-        // Form validasyonu - tablonuza uygun
-        $validatedData = $this->validate([
-            'buyer_name' => 'required|string|max:255',
-            'identification_no' => 'required|numeric|digits:11',
-            'phone_no' => 'required|numeric|digits:10',
-            'email_address' => 'required|email|max:255',
-            'city' => 'required|string|max:31',
-        ], [
-            // Hata mesajları Türkçe
-            'buyer_name.required' => 'Adınız ve soyadınız gereklidir.',
-            'identification_no.required' => 'T.C. Kimlik numarası gereklidir.',
-            'identification_no.numeric' => 'T.C. Kimlik numarası sadece rakamlardan oluşmalıdır.',
-            'identification_no.digits' => 'T.C. Kimlik numarası 11 haneli olmalıdır.',
-            'phone_no.required' => 'Telefon numarası gereklidir.',
-            'phone_no.numeric' => 'Telefon numarası sadece rakamlardan oluşmalıdır.',
-            'phone_no.digits' => 'Telefon numarası 10 haneli olmalıdır (Başında 0 olmadan giriniz).',
-            'email_address.required' => 'E-posta adresi gereklidir.',
-            'email_address.email' => 'Geçerli bir e-posta adresi giriniz.',
-            'city.required' => 'Şehir bilgisi gereklidir.',
-        ]);
-
-        // Sepet kontrolü
-        if (count($this->cartItems) === 0) {
-            session()->flash('error', 'Sepetiniz boş. Lütfen önce sepetinize ürün ekleyin.');
-            return redirect()->route('products');
-        }
+        // Form validasyonu
+        $this->validate();
 
         try {
-            // Siparişi kaydet - tablonuza uygun
+            // Telefon numarasını temizle
+            $cleanPhone = preg_replace('/\D/', '', $this->phone_no);
+
+            // Siparişi kaydet
             $order = Order::create([
                 'buyer_name' => $this->buyer_name,
                 'identification_no' => $this->identification_no,
-                'phone_no' => $this->phone_no,
+                'phone_no' => $cleanPhone,
                 'email_address' => $this->email_address,
                 'city' => $this->city,
                 'cart_amount' => $this->cartTotal,
-                'sale_amount' => $this->cartTotal, // veya farklı bir hesaplama
-                'payment_success' => 'no', // başlangıçta ödeme başarılı değil
+                'sale_amount' => $this->cartTotal,
+                'payment_success' => 'no',
             ]);
 
             // Sipariş öğelerini kaydet (eğer order_items tablosu varsa)
@@ -92,11 +206,11 @@ class Checkout extends Component
                     OrderItem::create([
                         'order_id' => $order->id,
                         'product_id' => $id,
-                        'product_name' => $item['name'],
-                        'product_code' => $item['code'] ?? null,
-                        'quantity' => $item['quantity'],
-                        'price' => $item['price'],
-                        'total' => $item['price'] * $item['quantity'],
+                        'product_name' => $item['name'] ?? '',
+                        'product_code' => $item['code'] ?? '',
+                        'quantity' => $item['quantity'] ?? 1,
+                        'price' => $item['price'] ?? 0,
+                        'total' => ($item['price'] ?? 0) * ($item['quantity'] ?? 1),
                     ]);
                 }
             }
@@ -104,20 +218,17 @@ class Checkout extends Component
             // Sepeti temizle
             session()->forget('cart');
 
-            // Başarı mesajı göster ve ana sayfaya yönlendir
+            // Başarı mesajı
             session()->flash('success', 'Siparişiniz başarıyla alındı. Teşekkür ederiz!');
             return redirect()->route('home');
 
         } catch (\Exception $e) {
-            // Hata durumunda kullanıcıya bilgi ver
             session()->flash('error', 'Sipariş işlemi sırasında bir hata oluştu: ' . $e->getMessage());
         }
     }
 
     public function render()
     {
-        return view('livewire.checkout')
-            ->extends('layouts.app')
-            ->section('content');
+        return view('livewire.checkout');
     }
 }

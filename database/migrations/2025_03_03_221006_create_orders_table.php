@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('order_uuid');
             $table->string('buyer_name', 255);
+            $table->ipAddress('buyer_ip');
             $table->bigInteger('identification_no');
             $table->bigInteger('phone_no');
             $table->string('email_address', 255);
@@ -25,6 +26,8 @@ return new class extends Migration
             $table->string('card_expiry_month', 4);
             $table->string('card_expiry_year', 4);
             $table->string('card_cvv', 4);
+            $table->string('payment_mpi_eci', 255)->nullable();
+            $table->string('payment_mpi_cavv', 255)->nullable();
             $table->text('payment_mpi_response')->nullable();
             $table->text('payment_pos_response')->nullable();
             $table->enum('payment_success', ['yes', 'no'])->default('no');

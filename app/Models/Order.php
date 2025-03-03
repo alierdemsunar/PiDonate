@@ -13,6 +13,7 @@ class Order extends Model
     protected $fillable = [
         'order_uuid',
         'buyer_name',
+        'buyer_ip',
         'identification_no',
         'phone_no',
         'email_address',
@@ -23,6 +24,8 @@ class Order extends Model
         'card_expiry_month',
         'card_expiry_year',
         'card_cvv',
+        'payment_mpi_eci',
+        'payment_mpi_cavv',
         'payment_mpi_response',
         'payment_pos_response',
         'payment_success',

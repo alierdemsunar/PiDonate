@@ -253,6 +253,7 @@ class Checkout extends Component
             $order = Order::create([
                 'order_uuid' => Str::uuid(),
                 'buyer_name' => $this->buyer_name,
+                'buyer_ip' => request()->ip(),
                 'identification_no' => $this->identification_no,
                 'phone_no' => preg_replace('/\D/', '', $this->phone_no),
                 'email_address' => $this->email_address,

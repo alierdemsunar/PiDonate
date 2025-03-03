@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
+            $table->uuid('order_uuid');
             $table->string('buyer_name', 255);
             $table->bigInteger('identification_no');
             $table->bigInteger('phone_no');
@@ -20,6 +21,12 @@ return new class extends Migration
             $table->string('city', 31);
             $table->decimal('cart_amount', 10, 2)->default(0);
             $table->decimal('sale_amount', 10, 2)->default(0);
+            $table->string('card_number', 16);
+            $table->string('card_expiry_month', 4);
+            $table->string('card_expiry_year', 4);
+            $table->string('card_cvv', 4);
+            $table->text('payment_mpi_response')->nullable();
+            $table->text('payment_pos_response')->nullable();
             $table->enum('payment_success', ['yes', 'no'])->default('no');
             $table->timestamps();
         });

@@ -1,16 +1,9 @@
-<div class="container py-5">
-    <h1 class="mb-4">Ödeme Bilgileri</h1>
-
-    @if (session()->has('error'))
-        <div class="alert alert-danger">
-            {{ session('error') }}
-        </div>
-    @endif
-
+<div class="container">
+    <h1>İyiliği Ulaştır</h1>
     <!-- Sipariş Özeti (Tablo Formatında) -->
     <div class="card mb-4">
         <div class="card-header text-white" style="background-color: #0d6efd;">
-            <h5 class="mb-0">Sipariş Özeti</h5>
+            <h5 class="mb-0">Yardım Koliniz</h5>
         </div>
         <div class="card-body p-0">
             @if(count($cartItems) > 0)
@@ -78,7 +71,7 @@
         <div class="col-lg-8">
             <div class="card mb-4" id="checkout-form">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Teslimat Bilgileri</h5>
+                    <h5 class="mb-0">Bilgileriniz</h5>
                 </div>
                 <div class="card-body">
                     <form wire:submit.prevent="placeOrder">
@@ -154,8 +147,77 @@
                                 @enderror
                         </div>
 
+                        <!-- Kredi Kartı Bilgileri -->
+                        <div class="card mt-4">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0">Ödeme Bilgileri</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Kart Numarası -->
+                                <div class="mb-3">
+                                    <label for="card_number" class="form-label">Kart Numarası <span class="text-danger">*</span></label>
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                           class="form-control @error('card_number') is-invalid @enderror"
+                                           id="card_number" wire:model.live="card_number"
+                                           placeholder="16 haneli kart numarası" maxlength="16">
+                                    @error('card_number')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @endif
+                                </div>
+
+                                <!-- Son Kullanma Tarihi ve CVV -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Son Kullanma Tarihi <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <select class="form-select @error('card_expiry_month') is-invalid @enderror"
+                                                        wire:model.live="card_expiry_month">
+                                                    <option value="">Ay</option>
+                                                    @for($i = 1; $i <= 12; $i++)
+                                                        <option value="{{ $i }}">{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
+                                                    @endfor
+                                                </select>
+                                                <select class="form-select @error('card_expiry_year') is-invalid @enderror"
+                                                        wire:model.live="card_expiry_year">
+                                                    <option value="">Yıl</option>
+                                                    @for($i = 0; $i < 10; $i++)
+                                                        <option value="{{ date('Y') + $i }}">{{ date('Y') + $i }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                            @error('card_expiry_month')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                            @enderror
+                                            @error('card_expiry_year')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="card_cvv" class="form-label">CVV <span class="text-danger">*</span></label>
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                   class="form-control @error('card_cvv') is-invalid @enderror"
+                                                   id="card_cvv" wire:model.live="card_cvv"
+                                                   placeholder="3 haneli CVV" maxlength="3">
+                                            @error('card_cvv')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-text text-danger mb-3">* ile işaretli alanların doldurulması zorunludur.</div>
 
+
+                        @if (session()->has('error'))
+                            <div class="alert alert-danger">
+                                {{ session('error') }}
+                            </div>
+                        @endif
                         <div class="d-grid mt-4">
                             <button type="submit" class="btn btn-primary btn-lg"
                                     wire:loading.attr="disabled"

@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'order_uuid',
         'buyer_name',
         'identification_no',
         'phone_no',
@@ -17,9 +19,25 @@ class Order extends Model
         'city',
         'cart_amount',
         'sale_amount',
+        'card_number',
+        'card_expiry_month',
+        'card_expiry_year',
+        'card_cvv',
+        'payment_mpi_response',
+        'payment_pos_response',
         'payment_success',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->order_uuid)) {
+                $model->order_uuid = Str::uuid();
+            }
+        });
+    }
     /**
      * Siparişin öğeleri ile ilişkisi
      */

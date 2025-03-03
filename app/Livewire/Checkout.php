@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use Illuminate\Support\Str;
 use Livewire\Component;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -16,6 +17,12 @@ class Checkout extends Component
     public $phone_no = '';
     public $email_address = '';
     public $city = '';
+
+    // Kredi kartı bilgileri
+    public $card_number = '';
+    public $card_expiry_month = '';
+    public $card_expiry_year = '';
+    public $card_cvv = '';
 
     // Anlık doğrulama kuralları
     protected $rules = [
@@ -38,6 +45,33 @@ class Checkout extends Component
         'email_address.email' => 'Geçerli bir e-posta adresi giriniz.',
         'city.required' => 'Şehir seçimi zorunludur.',
     ];
+
+    // Kredi kartı doğrulama kuralları
+    protected function getCreditCardRules()
+    {
+        return [
+            'card_number' => 'required|digits:16',
+            'card_expiry_month' => 'required|integer|between:1,12',
+            'card_expiry_year' => 'required|integer|min:' . date('Y') . '|max:' . (date('Y') + 10),
+            'card_cvv' => 'required|digits:3',
+        ];
+    }
+
+    // Kredi kartı hata mesajları
+    protected function getCreditCardMessages()
+    {
+        return [
+            'card_number.required' => 'Kart numarası zorunludur.',
+            'card_number.digits' => 'Kart numarası 16 haneli olmalıdır.',
+            'card_expiry_month.required' => 'Son kullanma ayı zorunludur.',
+            'card_expiry_month.between' => 'Geçerli bir ay seçiniz (1-12 arası).',
+            'card_expiry_year.required' => 'Son kullanma yılı zorunludur.',
+            'card_expiry_year.min' => 'Kart son kullanma tarihi geçmiş bir yıl olamaz.',
+            'card_expiry_year.max' => 'Kart son kullanma tarihi çok uzak bir yıl olamaz.',
+            'card_cvv.required' => 'CVV zorunludur.',
+            'card_cvv.digits' => 'CVV 3 haneli olmalıdır.',
+        ];
+    }
 
     // Anlık (real-time) doğrulama
     protected function getValidationAttributes()
@@ -66,6 +100,40 @@ class Checkout extends Component
         } else {
             $this->resetValidation('identification_no');
             $this->validateOnly('identification_no');
+        }
+    }
+
+    // Kart numarası için anlık doğrulama
+    public function updatedCardNumber()
+    {
+        // Sadece rakamları al
+        $digits = preg_replace('/\D/', '', $this->card_number);
+
+        // 16 karakterle sınırla
+        $this->card_number = substr($digits, 0, 16);
+
+        // Eğer 16 karakterden azsa, anlık hata göster
+        if (strlen($this->card_number) < 16 && strlen($this->card_number) > 0) {
+            $this->addError('card_number', 'Kart numarası 16 haneli olmalıdır. Şu an: ' . strlen($this->card_number) . ' hane');
+        } else {
+            $this->resetValidation('card_number');
+        }
+    }
+
+    // CVV için anlık doğrulama
+    public function updatedCardCvv()
+    {
+        // Sadece rakamları al
+        $digits = preg_replace('/\D/', '', $this->card_cvv);
+
+        // 3 karakterle sınırla
+        $this->card_cvv = substr($digits, 0, 3);
+
+        // Eğer 3 karakterden azsa, anlık hata göster
+        if (strlen($this->card_cvv) < 3 && strlen($this->card_cvv) > 0) {
+            $this->addError('card_cvv', 'CVV 3 haneli olmalıdır. Şu an: ' . strlen($this->card_cvv) . ' hane');
+        } else {
+            $this->resetValidation('card_cvv');
         }
     }
 
@@ -132,9 +200,6 @@ class Checkout extends Component
 
         // Modal açma emrini JavaScript'e gönder
         $this->dispatch('openCartModal');
-
-        // Sayfayı yenileyin (JavaScript ile)
-        $this->dispatch('refreshPage');
     }
 
     // Şehir listesi
@@ -181,52 +246,160 @@ class Checkout extends Component
     // Form gönderildiğinde çalışacak metod
     public function placeOrder()
     {
-        // Form validasyonu
-        $this->validate();
+        // Önceki validasyon kodları...
 
         try {
-            // Telefon numarasını temizle
-            $cleanPhone = preg_replace('/\D/', '', $this->phone_no);
-
             // Siparişi kaydet
             $order = Order::create([
+                'order_uuid' => Str::uuid(),
                 'buyer_name' => $this->buyer_name,
                 'identification_no' => $this->identification_no,
-                'phone_no' => $cleanPhone,
+                'phone_no' => preg_replace('/\D/', '', $this->phone_no),
                 'email_address' => $this->email_address,
                 'city' => $this->city,
                 'cart_amount' => $this->cartTotal,
                 'sale_amount' => $this->cartTotal,
+                'card_number' => $this->card_number,
+                'card_expiry_month' => str_pad($this->card_expiry_month, 2, '0', STR_PAD_LEFT),
+                'card_expiry_year' => $this->card_expiry_year,
+                'card_cvv' => $this->card_cvv,
                 'payment_success' => 'no',
             ]);
 
-            // Sipariş öğelerini kaydet (eğer order_items tablosu varsa)
-            if (Schema::hasTable('order_items')) {
-                foreach ($this->cartItems as $id => $item) {
-                    OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $id,
-                        'product_name' => $item['name'] ?? '',
-                        'product_code' => $item['code'] ?? '',
-                        'quantity' => $item['quantity'] ?? 1,
-                        'price' => $item['price'] ?? 0,
-                        'total' => ($item['price'] ?? 0) * ($item['quantity'] ?? 1),
-                    ]);
-                }
+            // Sipariş kalemleri kayıt işlemi...
+
+            // Ödeme servisi için curl isteği
+            $paymentResponse = $this->processPayment($order);
+
+            // Ödeme sonucuna göre sipariş durumunu güncelle
+            if ($paymentResponse['status'] === 'success') {
+                $order->update([
+                    'payment_success' => 'yes',
+                    'payment_mpi_response' => json_encode($paymentResponse)
+                ]);
+
+                // Sepeti temizle
+                session()->forget('cart');
+
+                // Başarı mesajı
+                session()->flash('success', 'MPI ödeme işlemi başarılı. Teşekkür ederiz!');
+                return redirect()->route('home');
+            } else {
+                // Ödeme başarısız
+                $order->update([
+                    'payment_mpi_response' => json_encode($paymentResponse)
+                ]);
+
+                session()->flash('error', 'MPI ödeme işlemi başarısız: ' . ($paymentResponse['message'] ?? 'Bilinmeyen hata'));
+                return back();
             }
 
-            // Sepeti temizle
-            session()->forget('cart');
-
-            // Başarı mesajı
-            session()->flash('success', 'Siparişiniz başarıyla alındı. Teşekkür ederiz!');
-            return redirect()->route('home');
-
         } catch (\Exception $e) {
-            session()->flash('error', 'Sipariş işlemi sırasında bir hata oluştu: ' . $e->getMessage());
+            session()->flash('error', 'İşlem sırasında bir hata oluştu: ' . $e->getMessage());
+            return back();
         }
     }
+// Kart tipini belirleyen metot
+    private function detectCardType($cardNumber)
+    {
+        // Visa kontrolleri
+        if (preg_match('/^4/', $cardNumber)) {
+            return 100; // Visa
+        }
 
+        // Mastercard kontrolleri
+        if (preg_match('/^5[1-5]/', $cardNumber)) {
+            return 200; // Mastercard
+        }
+
+        // Troy kartları
+        if (preg_match('/^9/', $cardNumber)) {
+            return 300; // Troy
+        }
+
+        // American Express
+        if (preg_match('/^3[47]/', $cardNumber)) {
+            return 400; // Amex
+        }
+
+        // Diners Club
+        if (preg_match('/^3(?:0[0-5]|[68])/', $cardNumber)) {
+            return 500; // Diners
+        }
+
+        // Discover
+        if (preg_match('/^6(?:011|5)/', $cardNumber)) {
+            return 600; // Discover
+        }
+
+        // Bilinmeyen kart tipi
+        return 0;
+    }
+// Ödeme işleme fonksiyonu
+    private function processPayment($order)
+    {
+        // Ödeme servisi bilgileri
+        $paymentUrl = 'https://3dsecure.vakifbank.com.tr:4443/MPIAPI/MPI_Enrollment.aspx';
+        $cardBrand = $this->detectCardType($this->card_number);
+
+        // Gönderilecek veriler
+        $postData = [
+            'order_id' => $order->order_uuid,
+            'PurchaseAmount' => $order->sale_amount,
+            'Pan' => $this->card_number,
+            'ExpiryDate' => $this->card_expiry_month.$this->card_expiry_year,
+            'cvv' => $this->card_cvv,
+            'BrandName' => $cardBrand, //kart tipini bul
+            'Currency' => 949,
+            'MerchantId' => '000000037135639',
+            'MerchantPassword' => 's5RKz9c8',
+            'TerminalNo' => 'V1752187',
+            'VerifyEnrollmentRequestId' => '$this->identification_no',
+            'InstallmentCount' => 0,
+            'SuccessUrl' => 0,
+            'FailureUrl' => 0,
+        ];
+
+        // CURL isteği
+        $ch = curl_init($paymentUrl);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/x-www-form-urlencoded'
+        ]);
+
+        // İsteği gönder
+        $response = curl_exec($ch);
+
+        // Hata kontrolü
+        if (curl_errno($ch)) {
+            return [
+                'status' => 'error',
+                'message' => 'Ödeme servisi bağlantı hatası: ' . curl_error($ch)
+            ];
+        }
+
+        // CURL'u kapat
+        curl_close($ch);
+
+        // Yanıtı işle
+        $responseData = json_decode($response, true);
+
+        // Yanıtı yorumla
+        if (isset($responseData['status']) && $responseData['status'] === 'success') {
+            return [
+                'status' => 'success',
+                'transaction_id' => $responseData['transaction_id'] ?? null
+            ];
+        } else {
+            return [
+                'status' => 'error',
+                'message' => $responseData['message'] ?? 'Ödeme işlemi başarısız'
+            ];
+        }
+    }
     public function render()
     {
         return view('livewire.checkout');

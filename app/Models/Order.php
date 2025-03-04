@@ -32,8 +32,16 @@ class Order extends Model
         'payment_mpi_error_code',
         'payment_mpi_error_message',
         'payment_mpi_response',
+        'payment_pos_transaction_id',
+        'payment_pos_result_code',
+        'payment_pos_result_detail',
+        'payment_pos_auth_code',
+        'payment_pos_host_date',
+        'payment_pos_rrn',
+        'payment_pos_currency_amount',
         'payment_pos_response',
-        'payment_success',
+        'payment_3d_success',
+        'payment_pos_success',
     ];
 
     protected static function boot()

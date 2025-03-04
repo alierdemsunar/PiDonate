@@ -34,8 +34,16 @@ return new class extends Migration
             $table->string('payment_mpi_error_code', 255)->nullable();
             $table->string('payment_mpi_error_message', 255)->nullable();
             $table->text('payment_mpi_response')->nullable();
+            $table->string('payment_pos_transaction_id', 255)->nullable();
+            $table->string('payment_pos_result_code', 255)->nullable();
+            $table->string('payment_pos_result_detail', 255)->nullable();
+            $table->string('payment_pos_auth_code', 255)->nullable();
+            $table->string('payment_pos_host_date', 255)->nullable();
+            $table->string('payment_pos_rrn', 255)->nullable();
+            $table->decimal('payment_pos_currency_amount', 10, 2)->nullable();
             $table->text('payment_pos_response')->nullable();
-            $table->enum('payment_success', ['yes', 'no'])->default('no');
+            $table->enum('payment_3d_success', ['yes', 'no'])->default('no');
+            $table->enum('payment_pos_success', ['yes', 'no'])->default('no');
             $table->timestamps();
         });
     }

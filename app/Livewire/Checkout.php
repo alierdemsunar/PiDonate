@@ -496,6 +496,7 @@ class Checkout extends Component
         $IsyeriNo = "000000037135639";
         $TerminalNo = "V1752187";
         $IsyeriSifre = "s5RKz9c8";
+        $orderId = $order->order_uuid;
         $KartNo = $order->card_number;
         $expiry = $order->card_expiry_year . str_pad($order->card_expiry_month, 2, '0', STR_PAD_LEFT);
         $KartCvv = $order->card_cvv;
@@ -511,6 +512,7 @@ class Checkout extends Component
         $PosXML = '<VposRequest>
                 <MerchantId>'.$IsyeriNo.'</MerchantId>
                 <Password>'.$IsyeriSifre.'</Password>
+                <OrderId>'.$orderId.'</OrderId>
                 <TerminalNo>'.$TerminalNo.'</TerminalNo>
                 <TransactionType>'.$IslemTipi.'</TransactionType>
                 <MpiTransactionId>'.$SiparID.'</MpiTransactionId>
@@ -541,7 +543,15 @@ class Checkout extends Component
         $result = curl_exec($ch);
 
         curl_close($ch);
-        return $result;
+        if ($order) {
+            $order->update([
+                'payment_mpi_response' => $result
+            ]);
+            session()->flash('success', 'Ödemeniz başarıyla tamamlandı.');
+            return $this->processVPOS($order);
+        }
+
+        dd($result) ;
     }
 
 

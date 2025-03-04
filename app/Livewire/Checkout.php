@@ -22,6 +22,25 @@ class Checkout extends Component
     public $card_expiry_year = '';
     public $card_cvv = '';
 
+
+    // Şehir listesi
+    public $cities = [
+        'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
+        'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale',
+        'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
+        'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Isparta', 'Mersin',
+        'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli',
+        'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş', 'Nevşehir',
+        'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas', 'Tekirdağ', 'Tokat',
+        'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray', 'Bayburt',
+        'Karaman', 'Kırıkkale', 'Batman', 'Şırnak', 'Bartın', 'Ardahan', 'Iğdır', 'Yalova', 'Karabük',
+        'Kilis', 'Osmaniye', 'Düzce'
+    ];
+
+    // Sepet özeti
+    public $cartItems = [];
+    public $cartTotal = 0;
+
     // Anlık doğrulama kuralları
     protected $rules = [
         'buyer_name' => 'required|string|max:255',
@@ -200,24 +219,6 @@ class Checkout extends Component
         $this->dispatch('openCartModal');
     }
 
-    // Şehir listesi
-    public $cities = [
-        'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
-        'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale',
-        'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
-        'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Isparta', 'Mersin',
-        'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli',
-        'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş', 'Nevşehir',
-        'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas', 'Tekirdağ', 'Tokat',
-        'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray', 'Bayburt',
-        'Karaman', 'Kırıkkale', 'Batman', 'Şırnak', 'Bartın', 'Ardahan', 'Iğdır', 'Yalova', 'Karabük',
-        'Kilis', 'Osmaniye', 'Düzce'
-    ];
-
-    // Sepet özeti
-    public $cartItems = [];
-    public $cartTotal = 0;
-
     public function mount()
     {
         // Sepet boşsa ürünler sayfasına yönlendir
@@ -250,8 +251,6 @@ class Checkout extends Component
     // Form gönderildiğinde çalışacak metod
     public function placeOrder()
     {
-        // Önceki validasyon kodları...
-
         try {
             $order_uuid = Str::uuid()->toString();
             // Siparişi kaydet
@@ -298,24 +297,16 @@ class Checkout extends Component
                     'termUrl' => $paymentResponse['termUrl']
                 ]);
 
+                $order->update([
+                    'payment_3d_success' => 'yes'
+                ]);
                 // Kullanıcıyı bekletme
                 return;
-/*
-                $order->update([
-                    'payment_success' => 'yes',
-                    'payment_mpi_response' => json_encode($paymentResponse)
-                ]);
-
-                // Sepeti temizle
-                session()->forget('cart');
-
-                // Başarı mesajı
-                session()->flash('success', 'MPI ödeme işlemi başarılı. Teşekkür ederiz!');
-                return redirect()->route('home');*/
             } else {
                 // Ödeme başarısız
                 $order->update([
-                    'payment_mpi_response' => json_encode($paymentResponse)
+                    'payment_mpi_response' => json_encode($paymentResponse),
+                    'payment_3d_success' => 'no',
                 ]);
 
                 session()->flash('error', 'MPI ödeme işlemi başarısız: ' . ($paymentResponse['message'] ?? 'Bilinmeyen hata'));
@@ -327,7 +318,6 @@ class Checkout extends Component
             return back();
         }
     }
-// Kart tipini belirleyen metot
     private function detectCardType($cardNumber)
     {
         // Visa kontrolleri
@@ -544,14 +534,37 @@ class Checkout extends Component
 
         curl_close($ch);
         if ($order) {
-            $order->update([
-                'payment_mpi_response' => $result
-            ]);
-            session()->flash('success', 'Ödemeniz başarıyla tamamlandı.');
-            return $this->processVPOS($order);
+            $parsed_vpos_response = $this->parseVPOSResponse($result);
+            if ($parsed_vpos_response['status'] == 'success') {
+                $order->update([
+                    'payment_pos_transaction_id' => $parsed_vpos_response['transaction_id'],
+                    'payment_pos_result_code' => $parsed_vpos_response['result_code'],
+                    'payment_pos_result_detail' => $parsed_vpos_response['result_detail'],
+                    'payment_pos_auth_code' => $parsed_vpos_response['auth_code'],
+                    'payment_pos_host_date' => $parsed_vpos_response['host_date'],
+                    'payment_pos_rrn' => $parsed_vpos_response['rrn'],
+                    'payment_pos_currency_amount' => $parsed_vpos_response['currency_amount'],
+                    'payment_pos_response' => $result,
+                    'payment_pos_success' => 'yes',
+                ]);
+                session()->forget('cart');
+                session()->flash('success', 'Ödemeniz başarıyla tamamlandı.');
+            } else {
+                $order->update([
+                    'payment_pos_transaction_id' => $parsed_vpos_response['transaction_id'],
+                    'payment_pos_result_code' => $parsed_vpos_response['result_code'],
+                    'payment_pos_result_detail' => $parsed_vpos_response['result_detail'],
+                    'payment_pos_auth_code' => $parsed_vpos_response['auth_code'],
+                    'payment_pos_host_date' => $parsed_vpos_response['host_date'],
+                    'payment_pos_rrn' => $parsed_vpos_response['rrn'],
+                    'payment_pos_currency_amount' => $parsed_vpos_response['currency_amount'],
+                    'payment_pos_response' => $result,
+                    'payment_pos_success' => 'no',
+                ]);
+                session()->flash('error', 'Ödemeniz alınamadı!');
+            }
         }
-
-        dd($result) ;
+        return redirect()->route('home');
     }
 
 
@@ -576,11 +589,57 @@ class Checkout extends Component
                 'payment_mpi_error_message' => $payment_mpi_error_message,
                 'payment_mpi_response' => json_encode($request->all())
             ]);
-            session()->flash('success', 'Ödemeniz başarıyla tamamlandı.');
+            session()->flash('success', '3D MPI başarıyla tamamlandı.');
             return $this->processVPOS($order);
         }
         session()->flash('error', 'Ödeme işlemi tamamlanamadı.');
         return redirect()->route('home');
+    }
+    private function parseVPOSResponse($xmlResponse)
+    {
+        try {
+            // XML'i SimpleXMLElement olarak yükle
+            $xml = new \SimpleXMLElement($xmlResponse);
+
+            // XML içeriğini diziye çevirme
+            $responseData = [
+                'merchant_id' => (string) $xml->MerchantId,
+                'transaction_type' => (string) $xml->TransactionType,
+                'transaction_id' => (string) $xml->TransactionId,
+                'result_code' => (string) $xml->ResultCode,
+                'result_detail' => (string) $xml->ResultDetail,
+                'auth_code' => (string) $xml->AuthCode,
+                'host_date' => (string) $xml->HostDate,
+                'rrn' => (string) $xml->Rrn,
+                'terminal_no' => (string) $xml->TerminalNo,
+                'currency_amount' => (float) $xml->CurrencyAmount,
+                'currency_code' => (int) $xml->CurrencyCode,
+                'order_id' => (string) $xml->OrderId,
+                'eci' => (string) $xml->ECI,
+                'three_d_secure_type' => (string) $xml->ThreeDSecureType,
+                'transaction_device_source' => (string) $xml->TransactionDeviceSource,
+                'batch_no' => (int) $xml->BatchNo,
+                'tl_amount' => (float) $xml->TLAmount,
+            ];
+
+            // İşlem sonucu başarılı mı?
+            if ($responseData['result_code'] === '0000') {
+                $responseData['status'] = 'success';
+                $responseData['message'] = 'Ödeme başarılı';
+            } else {
+                $responseData['status'] = 'error';
+                $responseData['message'] = $responseData['result_detail'];
+            }
+
+            return $responseData;
+        } catch (\Exception $e) {
+            \Log::error('VPOS Yanıt Parse Hatası: ' . $e->getMessage());
+            return [
+                'status' => 'error',
+                'message' => 'Ödeme yanıtı çözümlenemedi',
+                'raw_response' => $xmlResponse,
+            ];
+        }
     }
 
     public function handlePaymentFailure(Request $request)

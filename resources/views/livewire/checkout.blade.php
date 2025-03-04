@@ -235,7 +235,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-lg-4">
             <div class="card">
                 <div class="card-header bg-light">
@@ -249,4 +248,5 @@
             </div>
         </div>
     </div>
+    @livewire('three-d-secure-modal')
 </div>

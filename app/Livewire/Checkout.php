@@ -2,12 +2,12 @@
 
 namespace App\Livewire;
 
+use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use App\Models\Order;
-use App\Models\OrderItem;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Validation\Rule;
+use DOMDocument;
 
 class Checkout extends Component
 {
@@ -17,8 +17,6 @@ class Checkout extends Component
     public $phone_no = '';
     public $email_address = '';
     public $city = '';
-
-    // Kredi kartı bilgileri
     public $card_number = '';
     public $card_expiry_month = '';
     public $card_expiry_year = '';
@@ -232,6 +230,12 @@ class Checkout extends Component
         $this->refreshCart();
     }
 
+    private function getProductIdByName($productName)
+    {
+        $product = Product::where('name', $productName)->first();
+        return $product ? $product->id : null;
+    }
+
     public function refreshCart()
     {
         $this->cartItems = session('cart', []);
@@ -249,11 +253,12 @@ class Checkout extends Component
         // Önceki validasyon kodları...
 
         try {
+            $order_uuid = Str::uuid()->toString();
             // Siparişi kaydet
             $order = Order::create([
-                'order_uuid' => Str::uuid(),
+                'order_uuid' => $order_uuid,
                 'buyer_name' => $this->buyer_name,
-                'buyer_ip' => request()->ip(),
+                'buyer_ip' => request()->getClientIp(true),
                 'identification_no' => $this->identification_no,
                 'phone_no' => preg_replace('/\D/', '', $this->phone_no),
                 'email_address' => $this->email_address,
@@ -267,13 +272,35 @@ class Checkout extends Component
                 'payment_success' => 'no',
             ]);
 
+            foreach ($this->cartItems as $item) {
+                $order->items()->create([
+                    'product_id' => isset($item['id']) ? $item['id'] : $this->getProductIdByName($item['name']),
+                    'product_name' => $item['name'],
+                    'product_code' => $item['code'] ?? null,
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                    'total' => $item['price'] * $item['quantity'],
+                ]);
+            }
+
+
             // Sipariş kalemleri kayıt işlemi...
 
             // Ödeme servisi için curl isteği
             $paymentResponse = $this->processPayment($order);
 
             // Ödeme sonucuna göre sipariş durumunu güncelle
-            if ($paymentResponse['status'] === 'success') {
+            if ($paymentResponse['status'] === '3d_secure') {
+                $this->dispatch('open3DSecureModal', [
+                    'acsUrl' => $paymentResponse['acsUrl'],
+                    'paReq' => $paymentResponse['paReq'],
+                    'md' => $paymentResponse['md'],
+                    'termUrl' => $paymentResponse['termUrl']
+                ]);
+
+                // Kullanıcıyı bekletme
+                return;
+/*
                 $order->update([
                     'payment_success' => 'yes',
                     'payment_mpi_response' => json_encode($paymentResponse)
@@ -284,7 +311,7 @@ class Checkout extends Component
 
                 // Başarı mesajı
                 session()->flash('success', 'MPI ödeme işlemi başarılı. Teşekkür ederiz!');
-                return redirect()->route('home');
+                return redirect()->route('home');*/
             } else {
                 // Ödeme başarısız
                 $order->update([
@@ -341,35 +368,31 @@ class Checkout extends Component
     {
         // Ödeme servisi bilgileri
         $paymentUrl = 'https://3dsecure.vakifbank.com.tr:4443/MPIAPI/MPI_Enrollment.aspx';
-        $cardBrand = $this->detectCardType($this->card_number);
+        $card_brand = $this->detectCardType($this->card_number);
 
         // Gönderilecek veriler
         $postData = [
-            'order_id' => $order->order_uuid,
-            'PurchaseAmount' => $order->sale_amount,
+            'PurchaseAmount' => number_format($order->sale_amount, 2, '.', ''),
             'Pan' => $this->card_number,
-            'ExpiryDate' => $this->card_expiry_month.$this->card_expiry_year,
+            'ExpiryDate' => substr($this->card_expiry_year, -2) . str_pad($this->card_expiry_month, 2, '0', STR_PAD_LEFT),
             'cvv' => $this->card_cvv,
-            'BrandName' => $cardBrand, //kart tipini bul
-            'Currency' => 949,
+            'BrandName' => $card_brand,
+            'Currency' => '949',
             'MerchantId' => '000000037135639',
             'MerchantPassword' => 's5RKz9c8',
             'TerminalNo' => 'V1752187',
-            'VerifyEnrollmentRequestId' => '$this->identification_no',
-            'InstallmentCount' => 0,
-            'SuccessUrl' => 0,
-            'FailureUrl' => 0,
+            'VerifyEnrollmentRequestId' => $order->order_uuid,
+            'SuccessUrl' => route('payment.success'),
+            'FailureUrl' => route('payment.failure'),
         ];
 
         // CURL isteği
         $ch = curl_init($paymentUrl);
-        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POST, TRUE);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/x-www-form-urlencoded'
-        ]);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type"=>"application/x-www-form-urlencoded"]);
 
         // İsteği gönder
         $response = curl_exec($ch);
@@ -385,22 +408,191 @@ class Checkout extends Component
         // CURL'u kapat
         curl_close($ch);
 
-        // Yanıtı işle
-        $responseData = json_decode($response, true);
+        // Yanıtı logla (debug için)
+        \Log::info('MPI Yanıt XML: ' . $response);
 
-        // Yanıtı yorumla
-        if (isset($responseData['status']) && $responseData['status'] === 'success') {
+        return $this->parsePaymentResponse($response);
+    }
+
+    private function parsePaymentResponse($response)
+    {
+        // XML yanıtını parse et
+        $result_document = new DOMDocument();
+        $result_document->loadXML($response);
+
+        // XML hata kontrolü
+        $errors = libxml_get_errors();
+        libxml_clear_errors();
+
+        if (!empty($errors)) {
             return [
-                'status' => 'success',
-                'transaction_id' => $responseData['transaction_id'] ?? null
+                'status' => 'error',
+                'message' => 'XML Parsing Hatası',
+                'xml_errors' => array_map(function($error) {
+                    return $error->message;
+                }, $errors)
+            ];
+        }
+        $statusNode = $result_document->getElementsByTagName("Status")->item(0);
+        $status = "";
+        if( $statusNode != null )
+            $status = $statusNode->nodeValue;
+
+        //PAReq Bilgisi okunuyor
+        $PAReqNode = $result_document->getElementsByTagName("PaReq")->item(0);
+        $PaReq = "";
+        if( $PAReqNode != null )
+            $PaReq = $PAReqNode->nodeValue;
+
+        //ACSUrl Bilgisi okunuyor
+        $ACSUrlNode = $result_document->getElementsByTagName("ACSUrl")->item(0);
+        $ACSUrl = "";
+        if( $ACSUrlNode != null )
+            $ACSUrl = $ACSUrlNode->nodeValue;
+
+        //Term Url Bilgisi okunuyor
+        $TermUrlNode = $result_document->getElementsByTagName("TermUrl")->item(0);
+        $TermUrl = "";
+        if( $TermUrlNode != null )
+            $TermUrl = $TermUrlNode->nodeValue;
+
+        //MD Bilgisi okunuyor
+        $MDNode = $result_document->getElementsByTagName("MD")->item(0);
+        $MD = "";
+        if( $MDNode != null )
+            $MD = $MDNode->nodeValue;
+
+        //MessageErrorCode Bilgisi okunuyor
+        $messageErrorCodeNode = $result_document->getElementsByTagName("MessageErrorCode")->item(0);
+        $messageErrorCode = "";
+        if( $messageErrorCodeNode != null )
+            $messageErrorCode = $messageErrorCodeNode->nodeValue;
+
+        // XPath kullanarak daha güvenli veri çekme
+
+        // Status kontrolü
+        if ($status == "Y") {
+            return [
+                'status' => '3d_secure',
+                'acsUrl' => $ACSUrl,
+                'paReq' => $PaReq,
+                'termUrl' => $TermUrl,
+                'md' => $MD,
+                'raw_response' => $response
             ];
         } else {
             return [
                 'status' => 'error',
-                'message' => $responseData['message'] ?? 'Ödeme işlemi başarısız'
+                'message' => 'Ödeme işlemi başarısız',
+                'raw_response' => $response
             ];
         }
     }
+
+    private function processVPOS(Order $order)
+    {
+        // Ödeme servisi bilgileri
+        $PostUrl = 'https://onlineodeme.vakifbank.com.tr:4443/VposService/v3/Vposreq.aspx';
+        $IsyeriNo = "000000037135639";
+        $TerminalNo = "V1752187";
+        $IsyeriSifre = "s5RKz9c8";
+        $KartNo = $order->card_number;
+        $expiry = substr($order->card_expiry_year, -2) . str_pad($order->card_expiry_month, 2, '0', STR_PAD_LEFT);
+        $KartCvv = $order->card_cvv;
+        $Tutar = $order->sale_amount;
+        $SiparID = $order->payment_mpi_enrollment_request_id;
+        $IslemTipi = "Sale";
+        $TutarKodu = "949";
+        $ClientIp = request()->getClientIp(true);
+        $Eci = $order->payment_mpi_eci;
+        $Cavv = $order->payment_mpi_cavv;
+
+        // Vakıfbank'ın istediği XML formatında provizyon isteği hazırlama
+        $PosXML = '<VposRequest>
+                <MerchantId>'.$IsyeriNo.'</MerchantId>
+                <Password>'.$IsyeriSifre.'</Password>
+                <TerminalNo>'.$TerminalNo.'</TerminalNo>
+                <TransactionType>'.$IslemTipi.'</TransactionType>
+                <MpiTransactionId>'.$SiparID.'</MpiTransactionId>
+                <CurrencyAmount>'.$Tutar.'</CurrencyAmount>
+                <CurrencyCode>'.$TutarKodu.'</CurrencyCode>
+                <Pan>'.$KartNo.'</Pan>
+                <Expiry>'.$expiry.'</Expiry>
+                <Cvv>'.$KartCvv.'</Cvv>
+                <ECI>'.$Eci.'</ECI>
+                <CAVV>'.$Cavv.'</CAVV>
+                <TransactionDeviceSource>0</TransactionDeviceSource>
+                <ClientIp>'.$ClientIp.'</ClientIp>
+            </VposRequest>';
+
+        // XML'i prmstr parametresi içinde gönder
+        $postData = 'prmstr=' . $PosXML;
+
+        // Curl ile ödeme isteği gönder
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $PostUrl);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+
+        // Ödeme isteği gönderiliyor
+        $result = curl_exec($ch);
+
+        curl_close($ch);
+        return $result;
+    }
+
+
+    public function handlePaymentSuccess(Request $request)
+    {
+        $payment_mpi_enrollment_request_id = $request->input('VerifyEnrollmentRequestId');
+        $payment_mpi_xid = $request->input('Xid');
+        $payment_mpi_cavv = $request->input('Cavv');
+        $payment_mpi_eci = $request->input('Eci');
+        $payment_mpi_hash = $request->input('Hash');
+        $payment_mpi_error_code = $request->input('ErrorCode');
+        $payment_mpi_error_message = $request->input('ErrorMessage');
+        $order = Order::where('order_uuid', $payment_mpi_enrollment_request_id)->first();
+        if ($order) {
+            $order->update([
+                'payment_mpi_enrollment_request_id' => $payment_mpi_enrollment_request_id,
+                'payment_mpi_xid' => $payment_mpi_xid,
+                'payment_mpi_cavv' => $payment_mpi_cavv,
+                'payment_mpi_eci' => $payment_mpi_eci,
+                'payment_mpi_hash' => $payment_mpi_hash,
+                'payment_mpi_error_code' => $payment_mpi_error_code,
+                'payment_mpi_error_message' => $payment_mpi_error_message,
+                'payment_mpi_response' => json_encode($request->all())
+            ]);
+            session()->flash('success', 'Ödemeniz başarıyla tamamlandı.');
+            return $this->processVPOS($order);
+        }
+        session()->flash('error', 'Ödeme işlemi tamamlanamadı.');
+        return redirect()->route('home');
+    }
+
+    public function handlePaymentFailure(Request $request)
+    {
+        dd($request->all());
+        $orderUuid = $request->input('order_uuid');
+        $order = Order::where('order_uuid', $orderUuid)->first();
+
+        if ($order) {
+            $order->update([
+                'payment_success' => 'no',
+                'payment_pos_response' => json_encode($request->all())
+            ]);
+
+            session()->flash('error', 'Ödeme işlemi başarısız oldu.');
+            return redirect()->route('checkout');
+        }
+
+        session()->flash('error', 'Ödeme işlemi gerçekleştirilemedi.');
+        return redirect()->route('home');
+    }
+
     public function render()
     {
         return view('livewire.checkout');

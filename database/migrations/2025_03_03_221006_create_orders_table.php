@@ -26,8 +26,13 @@ return new class extends Migration
             $table->string('card_expiry_month', 4);
             $table->string('card_expiry_year', 4);
             $table->string('card_cvv', 4);
-            $table->string('payment_mpi_eci', 255)->nullable();
+            $table->string('payment_mpi_enrollment_request_id', 255)->nullable();
+            $table->string('payment_mpi_xid', 255)->nullable();
             $table->string('payment_mpi_cavv', 255)->nullable();
+            $table->string('payment_mpi_eci', 255)->nullable();
+            $table->string('payment_mpi_hash', 255)->nullable();
+            $table->string('payment_mpi_error_code', 255)->nullable();
+            $table->string('payment_mpi_error_message', 255)->nullable();
             $table->text('payment_mpi_response')->nullable();
             $table->text('payment_pos_response')->nullable();
             $table->enum('payment_success', ['yes', 'no'])->default('no');

@@ -497,7 +497,7 @@ class Checkout extends Component
         $TerminalNo = "V1752187";
         $IsyeriSifre = "s5RKz9c8";
         $KartNo = $order->card_number;
-        $expiry = substr($order->card_expiry_year, -2) . str_pad($order->card_expiry_month, 2, '0', STR_PAD_LEFT);
+        $expiry = $order->card_expiry_year . str_pad($order->card_expiry_month, 2, '0', STR_PAD_LEFT);
         $KartCvv = $order->card_cvv;
         $Tutar = $order->sale_amount;
         $SiparID = $order->payment_mpi_enrollment_request_id;

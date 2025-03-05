@@ -8,7 +8,7 @@
                     <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4 counters">
                         <i class="bi bi-boxes bi-xl-size"></i>
                     </div>
-                    <h2 class="card-title fw-bold text-info">388</h2>
+                    <h2 class="card-title fw-bold text-info">{{ $totalOrders }}</h2>
                     <p class="card-text text-info"><i class="bi bi-boxes me-1"></i> Toplam İyilik Kolisi</p>
                 </div>
             </div>
@@ -20,7 +20,7 @@
                     <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4 counters">
                         <i class="bi bi-house-heart bi-xl-size"></i>
                     </div>
-                    <h2 class="card-title fw-bold text-success">312.123,01 ₺</h2>
+                    <h2 class="card-title fw-bold text-success">{{ number_format($totalAmount, 2, ',', '.') }} ₺</h2>
                     <p class="card-text text-success"><i class="bi bi-house-heart me-1"></i> Toplam İyilik Tutarı</p>
                 </div>
             </div>

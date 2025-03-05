@@ -1,28 +1,22 @@
 @import 'tailwindcss';
-
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source "../**/*.blade.php";
-@source "../**/*.js";
-@source "../**/*.vue";
 @import 'bootstrap/dist/css/bootstrap.min.css';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
+@import './panel.css';
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
-}
 .counters {
     width: 80px;
     height: 80px;
 }
+
 .steps {
     width: 80px;
     height: 80px;
 }
+
 .bi-xl-size {
     font-size: 2.5rem;
 }
+
 .cart-icon {
     font-size: 1.5rem;
     color: #0d6efd; /* Bootstrap primary rengi */
@@ -52,6 +46,7 @@
         font-size: 1.75rem;
     }
 }
+
 /* Mobil optimizasyonlu sepet */
 .table-mobile-optimized {
     width: 100%;
@@ -224,6 +219,7 @@
         height: 30px;
     }
 }
+
 /* Ürün Kartı Stillemesi */
 .product-card {
     border-radius: 12px;
@@ -371,6 +367,7 @@
         height: 32px;
     }
 }
+
 /* Ürün kartı fiyat stili */
 .price-tag {
     display: flex;

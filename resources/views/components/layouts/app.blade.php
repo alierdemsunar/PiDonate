@@ -6,7 +6,6 @@
     <title>@yield('title', 'KoliVer - Ankara Büyükşehir Belediyesi')</title>
 
     <!-- Bootstrap CSS ve Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Livewire Styles -->
@@ -89,7 +88,6 @@
 </div>
 
 <!-- Bootstrap JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 
 <!-- Livewire Scripts -->
 @livewireScripts

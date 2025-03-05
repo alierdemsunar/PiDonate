@@ -77,7 +77,7 @@ class Order extends Model
      */
     public function getIsPaidAttribute()
     {
-        return $this->payment_success === 'yes';
+        return $this->payment_pos_success === 'yes';
     }
 
     /**
@@ -85,7 +85,7 @@ class Order extends Model
      */
     public function scopePaid($query)
     {
-        return $query->where('payment_success', 'yes');
+        return $query->where('payment_pos_success', 'yes');
     }
 
     /**
@@ -93,6 +93,6 @@ class Order extends Model
      */
     public function scopeUnpaid($query)
     {
-        return $query->where('payment_success', 'no');
+        return $query->where('payment_pos_success', 'no');
     }
 }

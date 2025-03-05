@@ -84,7 +84,7 @@
                     </div>
                     <h3 class="card-title fw-bold text-warning">3. Adım</h3>
                     <p class="card-text">Yardım koliniz hazır olduğunda <strong class="text-warning">"<i class="bi bi-cart3 me-1"></i> İyilik Sepetim"</strong> butonuna tıklayarak açılan pencereden <strong class="text-warning">"<i class="bi bi-bag-heart me-1"></i> İyiliği Ulaştır"</strong> butonuna basınız.
-                    <p class="text-muted small fst-italic mt-2">* İyiliği ulaştır butonuna bastıktan sonra sepette .<span class="badge bg-warning">%15 indirim</span> uygulandığını görebilirsiniz. </p>
+                    <p class="text-muted small fst-italic mt-2">* İyiliği ulaştır butonuna bastıktan sonra iyilik sepetinizin <span class="badge bg-warning">toplam tutarını</span> görebilirsiniz. </p>
                 </div>
             </div>
         </div>
